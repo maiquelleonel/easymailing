@@ -1,0 +1,7 @@
+name = Easy Mailing
+description = Provê a integração com o sistema Easy Mailing® da Dinamize®
+core = 6.x
+version = "0.1"
+project = "easymailing"
+package = "Third-party Integration"
+

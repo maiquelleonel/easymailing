@@ -19,7 +19,6 @@ function easymailing_menu() {
 function easymailing_help($path='') {
   switch ($path):
     case "admin/help#easymailing":
-   // case 'admin/settings/qq-campanhas':
       return "O módulo Easy Mailing possibilita gerar um formulario de cadastro da newsletter integrado com o sistema Easy Mailing da Dinamize.";
     break;
   endswitch;
@@ -91,7 +90,6 @@ function easymailing_nodeapi(&$node,$op,$a3=NULL,$a4=NULL){
     if($node->type == ''):
         switch($op):
             case 'validate':
-
             break;
             case 'insert':
             break;

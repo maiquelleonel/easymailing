@@ -82,6 +82,7 @@ function easymailing_settings_form_validate($form, &$form_state) {
             case 'easymailing_FORMS':
                 $webforms = easymailing_sanitize_results($value);
                 foreach($webforms as $i => $nid):
+                    //TODO: verificar se o webform possui algum campo do tipo|nome contentdo email e /ou nome para mandar para o easymailing.
                     $webforms[$i] = webform_node_load(node_load($nid));
                 endforeach;
                 pr($webforms);

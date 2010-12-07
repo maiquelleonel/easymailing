@@ -19,7 +19,7 @@ function easymailing_menu() {
 function easymailing_help($path='') {
   switch ($path):
     case "admin/help#easymailing":
-      return "O módulo Easy Mailing possibilita gerar um formulario de cadastro da newsletter integrado com o sistema Easy Mailing da Dinamize.";
+      return "O módulo Easy Mailing possibilita integrar um webform com o sistema Easy Mailing® da Dinamize.";
     break;
   endswitch;
   return '';
@@ -36,13 +36,30 @@ function easymailing_help($path='') {
  * Implementation of hook_form();
  */
 function easymailing_settings_form() {
-  $form['easymailing'] = array(
-    '#title' => '',
-    '#type' => 'textfield',
-    '#description' => 'Digite somente números inteiros.',
-    '#default_value' => variable_get('easymailing', 1),
+  $form['easymailing_CON_ID'] = array(
+    '#title'         => 'CON_ID',
+    '#type'          => 'textfield',
+    '#required'      => true,
+    '#description'   => 'O <strong>CON_ID</strong> é o <em>ID da sua conta</em> no easy mailing. ' .
+                        'Copie o valor que estiver em \'value=""\' no campo correspondente do easy mailing.',
+    '#default_value' => variable_get('easymailing_CON_ID',''),
   );
-  $form[] = array(
+  $form['easymailing_GROUPS'] = array(
+    '#title' => 'GROUPS',
+    '#type' => 'textarea',
+    '#description' => 'Aqui você deve preencher os grupos que vai utilizar na integração. ' .
+                      'A sintaxe deve ser um par de <em>código|nome-do-grupo</em> e deve ser digitado um par por linha. <br />' .
+                      'Essa configuração possibilita a integração para '
+                      ,
+    '#default_value' => easymailing_get_groups('show') ,
+  );
+  $form['easymailing_FORMS'] = array(
+    '#title'       => 'Forms',
+    '#type'        => 'checkboxes',
+    '#description' => 'Selecione quais formulários terão seus dados compartilhados com o Easy Mailing @',
+    '#options'     => easymailing_webform_get_all(),
+  );
+  $form['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Salvar configuração',
   );
@@ -53,34 +70,47 @@ function easymailing_settings_form() {
  * Implementation of hook_validate();
  */
 function easymailing_settings_form_validate($form, &$form_state) {
-    $args = func_get_args();
-    foreach($args[1]['values'] as $var_name => $value):
+    foreach($form_state['values'] as $var_name => $value):
         switch($var_name):
-            case 'easymailing':
+            case 'easymailing_GROUPS':
+                $allowed_values = _transcript_values($value,'store');
+                variable_set($var_name,$allowed_values);
+            break;
+            case 'easymailing_CON_ID':
+                variable_set($var_name,$value);
+            break;
+            default:
+               continue;
             break;
         endswitch;
     endforeach;
 }
- /**
-  * Função de apoio que centraliza as mensagens de erro
-  * usada no easymailing_settings_form_validate
-  * @param $field_name - field name with error
-  * @param $form - form object
-  */
-function _message_to(){
-    $p = func_get_args();
-    $type_message = 'error';
-    if(is_array($p[0])):
-        array_unshift($p,'first');
-        $type_message = 'ok';
-    endif;
-    if(!isset($p[1])) return false;
 
-    $messages = array(
-      'easymailing' => " " ,
-      'first'       => "Configuração salva com sucesso!"
-    );
-    drupal_set_message($messages[$p[0]],$type_message);
+function _transcript_values($values,$to_save){
+    $ret = array();
+    switch($to_save):
+        case 'store':
+            $vals = explode("\n",$values);
+            foreach($vals as $val):
+                list($i,$v) = explode('|',$val);
+                $ret[$i] = $v;
+            endforeach;
+            return serialize($ret);
+        break;
+        case 'show':
+            $vals = unserialize($values);
+            foreach($vals as $i => $v):
+                $ret[] = $i . '|' . $v;
+            endforeach;
+            return join("\n",$ret);
+        break;
+        case 'array':
+            return unserialize($values);
+        break;
+        default:
+            return array();
+        break;
+    endswitch;
 }
 
 /**
@@ -95,5 +125,18 @@ function easymailing_nodeapi(&$node,$op,$a3=NULL,$a4=NULL){
             break;
         endswitch;
     endif;
+}
+
+function easymailing_get_groups($format){
+   return _transcript_values(variable_get('easymailing_GROUPS',''),$format);
+}
+
+function easymailing_webform_get_all(){
+    $results = array();
+    $query = db_query("SELECT nid, title FROM {node} WHERE type = '%s'",'webform');
+    while($webform = db_fetch_object($query)):
+        $results[$webform->nid] = $webform->title;
+    endwhile;
+    return $results;
 }
 

@@ -3,5 +3,6 @@ description = Provê a integração com o sistema Easy Mailing® da Dinamize®
 core = 6.x
 version = "0.1"
 project = "easymailing"
+dependencies[] = webform
 package = "Third-party Integration"
 

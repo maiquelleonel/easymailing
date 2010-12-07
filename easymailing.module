@@ -56,7 +56,7 @@ function easymailing_settings_form() {
   $form['easymailing_FORMS'] = array(
     '#title'       => 'Forms',
     '#type'        => 'checkboxes',
-    '#description' => 'Selecione quais formulários terão seus dados compartilhados com o Easy Mailing @',
+    '#description' => 'Selecione os formulários que terão seus dados compartilhados com o Easy Mailing@',
     '#options'     => easymailing_webform_get_all(),
   );
   $form['submit'] = array(
@@ -78,6 +78,14 @@ function easymailing_settings_form_validate($form, &$form_state) {
             break;
             case 'easymailing_CON_ID':
                 variable_set($var_name,$value);
+            break;
+            case 'easymailing_FORMS':
+                $webforms = easymailing_sanitize_results($value);
+                foreach($webforms as $i => $nid):
+                    $webforms[$i] = webform_node_load(node_load($nid));
+                endforeach;
+                pr($webforms);
+                exit(0);
             break;
             default:
                continue;
@@ -126,6 +134,16 @@ function easymailing_nodeapi(&$node,$op,$a3=NULL,$a4=NULL){
         endswitch;
     endif;
 }
+
+function easymailing_sanitize_results($values){
+    $ret = array();
+    foreach ($values as $i => $v):
+        if($v > 0) $ret[$i] = $v;
+    endforeach;
+    return $ret;
+}
+
+
 
 function easymailing_get_groups($format){
    return _transcript_values(variable_get('easymailing_GROUPS',''),$format);

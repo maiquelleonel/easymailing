@@ -82,10 +82,23 @@ function easymailing_settings_form_validate($form, &$form_state) {
             case 'easymailing_FORMS':
                 $webforms = easymailing_sanitize_results($value);
                 foreach($webforms as $i => $nid):
-                    //TODO: verificar se o webform possui algum campo do tipo|nome contentdo email e /ou nome para mandar para o easymailing.
-                    $webforms[$i] = webform_node_load(node_load($nid));
+                    //TODO: store webforms nid after validations!
+                    $webform = webform_node_load(node_load($nid));
+                    pr($webform);
+                    if(empty($webform['components'])):
+                        drupal_set_message('O webform escolido não possui nenhum componente.','error');
+                    else:
+                        foreach($webform['components'] as $component):
+                            //FIXME: apply i18n way
+                            if(strpos($component['name'],t('nome')) !== false && $component['type'] == 'textfield'):
+                                //mark to store this
+                            endif;
+                            if($component['type'] == 'email')
+                                //mark to save
+                            endif;
+                        endforeach;
+                    endif;
                 endforeach;
-                pr($webforms);
                 exit(0);
             break;
             default:

@@ -29,7 +29,7 @@ function easymailing_help($path='') {
  * Implementation of hook_perm()
  */
  function easymailing_perm(){
-     return array('Administrar configurações');
+     return array('Administrar configurações do Easy Mailing');
  }
 
 /**
@@ -101,10 +101,10 @@ function easymailing_settings_form_validate($form, &$form_state) {
                     if(easymailing_validate_webform($webform)):
                         $values_to_store[$i] = $nid;
                     else:
-                        $erro = true;
+                        $error = true;
                     endif;
                 endforeach;
-                if(sizeof($values_to_store) && !$erro):
+                if(sizeof($values_to_store) && !$error):
                     variable_set($var_name,serialize($values_to_store));
                 else:
                     drupal_set_message('O formulário <strong>'.$webform_node->title .'</strong> não possui um campo de email.','error');
@@ -115,7 +115,7 @@ function easymailing_settings_form_validate($form, &$form_state) {
             break;
         endswitch;
     endforeach;
-    drupal_set_message('As configurações salvas com sucesso!','ok');
+    drupal_set_message('As configurações foram salvas com sucesso!','ok');
 }
 
 function easymailing_validate_webform($p_webform){
@@ -185,23 +185,18 @@ function _transcript_values($values,$to_save){
  * Implementation of hook_webform_submission_insert();
  */
 function easymailing_webform_submission_insert($node,$submission){
-    //global $node;
     $headers = array('Content-Type' => 'application/x-www-form-urlencoded');
     $webforms_senders = unserialize(variable_get('easymailing_FORMS',array()));
     if(sizeof($webforms_senders) && in_array($node->nid,$webforms_senders)):
         $url = variable_get('easymailing_action','');
         if(empty($url)) return;
         $easymailing_params = easymailing_process_submissions_into_params($node,$submission);
-        //pr($easymailing_params);
         $res = drupal_http_request($url,$headers,$method='POST',$easymailing_params);
-        pr($res);
-        exit(0);
     endif;
 }
 
 
 function easymailing_process_submissions_into_params($node,$submission){
-    //pr(a($node,$submission));
     $ret = array();
     foreach($node->webform['components'] as $key => $component):
         switch($component['type']):
@@ -235,7 +230,6 @@ function easymailing_parse_url_params($params){
     return implode('&',$ret);
 }
 
-
 function easymailing_sanitize_results($values){
     $ret = array();
     foreach ($values as $i => $v):
@@ -243,8 +237,6 @@ function easymailing_sanitize_results($values){
     endforeach;
     return $ret;
 }
-
-
 
 function easymailing_get_groups($format){
    return _transcript_values(variable_get('easymailing_GROUPS',''),$format);

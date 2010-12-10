@@ -44,6 +44,13 @@ function easymailing_settings_form() {
                         'Copie o valor que estiver em \'value=""\' no campo correspondente do easy mailing.',
     '#default_value' => variable_get('easymailing_CON_ID',''),
   );
+  $form['easymailing_action'] = array(
+    '#title'         => 'Action',
+    '#type'          => 'textfield',
+    '#required'      => true,
+    '#description'   => 'A action do formulário é o endereço para onde os dados do seu cliente serão processados. ',
+    '#default_value' => variable_get('easymailing_action',''),
+  );
   $form['easymailing_GROUPS'] = array(
     '#title' => 'GROUPS',
     '#type' => 'textarea',
@@ -53,11 +60,13 @@ function easymailing_settings_form() {
                       ,
     '#default_value' => easymailing_get_groups('show') ,
   );
+  $default_values_forms = variable_get('easymailing_FORMS',array());
   $form['easymailing_FORMS'] = array(
-    '#title'       => 'Forms',
-    '#type'        => 'checkboxes',
-    '#description' => 'Selecione os formulários que terão seus dados compartilhados com o Easy Mailing@',
-    '#options'     => easymailing_webform_get_all(),
+    '#title'         => 'Forms',
+    '#type'          => 'checkboxes',
+    '#description'   => 'Selecione os formulários que terão seus dados compartilhados com o Easy Mailing@',
+    '#options'       => easymailing_webform_get_all(),
+    '#default_value' => unserialize($default_values_forms),
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -79,33 +88,70 @@ function easymailing_settings_form_validate($form, &$form_state) {
             case 'easymailing_CON_ID':
                 variable_set($var_name,$value);
             break;
+            case 'easymailing_action':
+                variable_set($var_name,$value);
+            break;
             case 'easymailing_FORMS':
+                $values_to_store = array();
                 $webforms = easymailing_sanitize_results($value);
                 foreach($webforms as $i => $nid):
-                    //TODO: store webforms nid after validations!
-                    $webform = webform_node_load(node_load($nid));
-                    pr($webform);
-                    if(empty($webform['components'])):
-                        drupal_set_message('O webform escolido não possui nenhum componente.','error');
+                    global $webform_node;
+                    $webform_node = node_load($nid);
+                    $webform = webform_node_load($webform_node);
+                    if(easymailing_validate_webform($webform)):
+                        $values_to_store[$i] = $nid;
                     else:
-                        foreach($webform['components'] as $component):
-                            //FIXME: apply i18n way
-                            if(strpos($component['name'],t('nome')) !== false && $component['type'] == 'textfield'):
-                                //mark to store this
-                            endif;
-                            if($component['type'] == 'email')
-                                //mark to save
-                            endif;
-                        endforeach;
+                        $erro = true;
                     endif;
                 endforeach;
-                exit(0);
+                if(sizeof($values_to_store) && !$erro):
+                    variable_set($var_name,serialize($values_to_store));
+                else:
+                    drupal_set_message('O formulário <strong>'.$webform_node->title .'</strong> não possui um campo de email.','error');
+                endif;
             break;
             default:
                continue;
             break;
         endswitch;
     endforeach;
+    drupal_set_message('As configurações salvas com sucesso!','ok');
+}
+
+function easymailing_validate_webform($p_webform){
+    global $webform_node;
+    $webform = $p_webform['webform'];
+    $ret = $error = false;
+    if(sizeof($webform['components'])):
+        foreach($webform['components'] as $component):
+            if(_component_type_is_valid($component)):
+                $ret = true;
+            else:
+                $ret = !$error = true;
+            endif;
+        endforeach;
+        return $ret;
+    else:
+       drupal_set_message('O formulário <strong>' . $webform_node->title . '</strong> não possui componentes.','error');
+       return $ret;
+    endif;
+}
+
+function _component_type_is_valid($component){
+    global $webform_node;
+    $ret = false;
+    if($component['type'] == 'email'):
+        $ret = true;
+    elseif(_component_name_is_not_username($component)):
+       $message = 'O formulário <strong>' . $webform_node->title . '</strong> não possui um campo chamado nome. ' .
+       'Emails sem nome são mais fáceis de cair em SPAM.';
+       drupal_set_message($message,'warning');
+    endif;
+    return $ret;
+}
+
+function _component_name_is_not_username($component){
+    return !(strpos(drupal_strtolower($component['name']),t('nome')) !== false && $component['type'] == 'textfield');
 }
 
 function _transcript_values($values,$to_save){
@@ -136,18 +182,59 @@ function _transcript_values($values,$to_save){
 }
 
 /**
- * Implementation of hook_nodeapi();
+ * Implementation of hook_webform_submission_insert();
  */
-function easymailing_nodeapi(&$node,$op,$a3=NULL,$a4=NULL){
-    if($node->type == ''):
-        switch($op):
-            case 'validate':
-            break;
-            case 'insert':
-            break;
-        endswitch;
+function easymailing_webform_submission_insert($node,$submission){
+    //global $node;
+    $headers = array('Content-Type' => 'application/x-www-form-urlencoded');
+    $webforms_senders = unserialize(variable_get('easymailing_FORMS',array()));
+    if(sizeof($webforms_senders) && in_array($node->nid,$webforms_senders)):
+        $url = variable_get('easymailing_action','');
+        if(empty($url)) return;
+        $easymailing_params = easymailing_process_submissions_into_params($node,$submission);
+        //pr($easymailing_params);
+        $res = drupal_http_request($url,$headers,$method='POST',$easymailing_params);
+        pr($res);
+        exit(0);
     endif;
 }
+
+
+function easymailing_process_submissions_into_params($node,$submission){
+    //pr(a($node,$submission));
+    $ret = array();
+    foreach($node->webform['components'] as $key => $component):
+        switch($component['type']):
+            case 'email':
+                $ret['SMT_MAIL'] = pos($submission->data[$key]['value']);
+            break;
+            case 'textfield':
+                if(strpos(drupal_strtolower($component['name']),'nome') !== false):
+                    $ret['SMT_NOME'] = end($submission->data[$key]['value']);
+                endif;
+            break;
+            default:
+                if(strpos(drupal_strtolower($component['name']),'grupo') !== false):
+                    $ret['GRUPOS'] = end($submission->data[$key]['value']);
+                endif;
+            break;
+         endswitch;
+    endforeach;
+    $ret['CON_ID'] = variable_get('easymailing_CON_ID','');
+    $ret['SMT_RECEBER'] = 1;
+    $ret['DESTINO'] = '';
+    if(!isset($ret['GRUPOS'])) $ret['GRUPOS'] = pos(array_keys(easymailing_get_groups('array')));
+    $ret = easymailing_parse_url_params($ret);
+    return $ret;
+}
+
+function easymailing_parse_url_params($params){
+   $ret = array();
+   foreach($params as $k => $v)
+      $ret[] = $k . '=' . rawurlencode($v);
+    return implode('&',$ret);
+}
+
 
 function easymailing_sanitize_results($values){
     $ret = array();

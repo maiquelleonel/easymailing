@@ -196,6 +196,8 @@ function easymailing_webform_submission_insert($node,$submission){
         if(empty($url)) return;
         $easymailing_params = easymailing_process_submissions_into_params($node,$submission);
         $res = drupal_http_request($url,$headers,$method='POST',$easymailing_params);
+        //pr($res);
+        //exit(0);
     endif;
 }
 

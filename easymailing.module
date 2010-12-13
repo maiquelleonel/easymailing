@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Implementation of hook_menu().
  */
@@ -68,6 +67,12 @@ function easymailing_settings_form() {
     '#options'       => easymailing_webform_get_all(),
     '#default_value' => unserialize($default_values_forms),
   );
+  $form['easymailing_REDIRECT'] = array(
+    '#title' => 'URL de Retorno',
+    '#type' => 'textfield',
+    '#description' => 'Cadastre a URL de Retorno, se houver. O Easy Mailing® automaticamente redirecionará para ela ou, por padrão, para a home do site.',
+    '#default_value' => variable_get('easymailing_REDIRECT',''),
+  );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Salvar configuração',
@@ -84,12 +89,6 @@ function easymailing_settings_form_validate($form, &$form_state) {
             case 'easymailing_GROUPS':
                 $allowed_values = _transcript_values($value,'store');
                 variable_set($var_name,$allowed_values);
-            break;
-            case 'easymailing_CON_ID':
-                variable_set($var_name,$value);
-            break;
-            case 'easymailing_action':
-                variable_set($var_name,$value);
             break;
             case 'easymailing_FORMS':
                 $values_to_store = array();
@@ -109,6 +108,11 @@ function easymailing_settings_form_validate($form, &$form_state) {
                 else:
                     drupal_set_message('O formulário <strong>'.$webform_node->title .'</strong> não possui um campo de email.','error');
                 endif;
+            break;
+            case 'easymailing_CON_ID':
+            case 'easymailing_action':
+            case 'easymailing_REDIRECT':
+                 variable_set($var_name,$value);
             break;
             default:
                continue;
@@ -217,7 +221,7 @@ function easymailing_process_submissions_into_params($node,$submission){
     endforeach;
     $ret['CON_ID'] = variable_get('easymailing_CON_ID','');
     $ret['SMT_RECEBER'] = 1;
-    $ret['DESTINO'] = '';
+    $ret['DESTINO'] = variable_get('easymailing_REDIRECT','');
     if(!isset($ret['GRUPOS'])) $ret['GRUPOS'] = pos(array_keys(easymailing_get_groups('array')));
     $ret = easymailing_parse_url_params($ret);
     return $ret;
@@ -227,7 +231,7 @@ function easymailing_parse_url_params($params){
    $ret = array();
    foreach($params as $k => $v)
       $ret[] = $k . '=' . rawurlencode($v);
-    return implode('&',$ret);
+   return implode('&',$ret);
 }
 
 function easymailing_sanitize_results($values){

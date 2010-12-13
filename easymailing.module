@@ -221,7 +221,7 @@ function easymailing_process_submissions_into_params($node,$submission){
     endforeach;
     $ret['CON_ID'] = variable_get('easymailing_CON_ID','');
     $ret['SMT_RECEBER'] = 1;
-    $ret['DESTINO'] = variable_get('easymailing_REDIRECT','');
+    $ret['DESTINO'] = base_path() . variable_get('easymailing_REDIRECT','');
     if(!isset($ret['GRUPOS'])) $ret['GRUPOS'] = pos(array_keys(easymailing_get_groups('array')));
     $ret = easymailing_parse_url_params($ret);
     return $ret;

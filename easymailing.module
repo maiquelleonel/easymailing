@@ -196,18 +196,17 @@ function easymailing_webform_submission_insert($node,$submission){
         if(empty($url)) return;
         $easymailing_params = easymailing_process_submissions_into_params($node,$submission);
         $res = drupal_http_request($url,$headers,$method='POST',$easymailing_params);
-        //pr($res);
-        //exit(0);
     endif;
 }
 
 
 function easymailing_process_submissions_into_params($node,$submission){
     $ret = array();
+    ///pr($node->webform['components']);
     foreach($node->webform['components'] as $key => $component):
         switch($component['type']):
             case 'email':
-                $ret['SMT_MAIL'] = pos($submission->data[$key]['value']);
+                $ret['SMT_MAIL'] = end($submission->data[$key]['value']);
             break;
             case 'textfield':
                 if(strpos(drupal_strtolower($component['name']),'nome') !== false):

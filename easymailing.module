@@ -230,16 +230,13 @@ function easymailing_process_submissions_into_params($node,$submission){
 
 function easymailing_parse_url_params($params){
    $ret = array();
-   foreach($params as $k => $v)
-      $ret[] = $k . '=' . rawurlencode($v);
+   foreach($params as $k => $v) $ret[] = $k . '=' . rawurlencode($v);
    return implode('&',$ret);
 }
 
 function easymailing_sanitize_results($values){
     $ret = array();
-    foreach ($values as $i => $v):
-        if($v > 0) $ret[$i] = $v;
-    endforeach;
+    foreach ($values as $i => $v) if($v > 0) $ret[$i] = $v;
     return $ret;
 }
 
